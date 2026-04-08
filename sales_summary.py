@@ -34,6 +34,12 @@ def parse_args(argv=None):
         default="text",
         help="出力形式。text または json。既定値: text",
     )
+    parser.add_argument(
+        "--sort",
+        choices=["product", "sales"],
+        default="product",
+        help="並び順。product は商品名順、sales は売上の高い順。既定値: product",
+    )
     return parser.parse_args(argv)
 
 
@@ -90,19 +96,25 @@ def summarize_sales(rows):
     return dict(totals)
 
 
-def format_totals(totals):
+def sort_totals(totals, sort_by="product"):
+    if sort_by == "sales":
+        return sorted(totals.items(), key=lambda item: (-item[1], item[0]))
+    return sorted(totals.items())
+
+
+def format_totals(totals, sort_by="product"):
     lines = ["商品別 合計売上", "----------------"]
 
-    for product, total in sorted(totals.items()):
+    for product, total in sort_totals(totals, sort_by):
         lines.append(f"{product}: {total:,}円")
 
     return "\n".join(lines)
 
 
-def format_totals_json(totals):
+def format_totals_json(totals, sort_by="product"):
     json_ready_totals = {
         product: decimal_to_json_value(total)
-        for product, total in sorted(totals.items())
+        for product, total in sort_totals(totals, sort_by)
     }
     return json.dumps(json_ready_totals, ensure_ascii=False)
 
@@ -113,8 +125,8 @@ def decimal_to_json_value(value):
     return str(value)
 
 
-def print_totals(totals):
-    print(format_totals(totals))
+def print_totals(totals, sort_by="product"):
+    print(format_totals(totals, sort_by))
 
 
 def main(argv=None):
@@ -133,9 +145,9 @@ def main(argv=None):
         return 1
 
     if args.format == "json":
-        print(format_totals_json(totals))
+        print(format_totals_json(totals, args.sort))
     else:
-        print_totals(totals)
+        print_totals(totals, args.sort)
 
     return 0
 
