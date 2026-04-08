@@ -32,6 +32,23 @@ def test_read_sales_rows_raises_when_file_missing(tmp_path):
         read_sales_rows(missing_file)
 
 
+def test_read_sales_rows_raises_when_path_is_directory(tmp_path):
+    with pytest.raises(ValueError, match="CSVファイルではなくディレクトリ"):
+        read_sales_rows(tmp_path)
+
+
+def test_read_sales_rows_raises_when_encoding_does_not_match(tmp_path):
+    csv_file = tmp_path / "sales_cp932.csv"
+    csv_file.write_text(
+        "product,sales\n"
+        "りんご,1200\n",
+        encoding="cp932",
+    )
+
+    with pytest.raises(ValueError, match="文字コードが utf-8 として読み取れません"):
+        read_sales_rows(csv_file, encoding="utf-8")
+
+
 def test_read_sales_rows_raises_when_sales_is_invalid(tmp_path):
     csv_file = tmp_path / "invalid_sales.csv"
     csv_file.write_text(

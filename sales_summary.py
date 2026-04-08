@@ -52,37 +52,46 @@ def read_sales_rows(
     path = Path(csv_file)
     if not path.exists():
         raise FileNotFoundError(f"CSVファイルが見つかりません: {path}")
+    if path.is_dir():
+        raise ValueError(f"CSVファイルではなくディレクトリが指定されました: {path}")
 
     rows = []
-    with path.open(newline="", encoding=encoding) as file:
-        reader = csv.DictReader(file)
+    try:
+        with path.open(newline="", encoding=encoding) as file:
+            reader = csv.DictReader(file)
 
-        if reader.fieldnames is None:
-            raise ValueError("CSVにヘッダー行がありません。")
+            if reader.fieldnames is None:
+                raise ValueError("CSVにヘッダー行がありません。")
 
-        missing_columns = [
-            column
-            for column in (product_column, sales_column)
-            if column not in reader.fieldnames
-        ]
-        if missing_columns:
-            raise ValueError(f"CSVに必要な列がありません: {', '.join(missing_columns)}")
-
-        for line_number, row in enumerate(reader, start=2):
-            product = row[product_column].strip()
-            sales_text = row[sales_column].strip()
-
-            if not product:
-                raise ValueError(f"{line_number}行目の商品名が空です。")
-
-            try:
-                sales = Decimal(sales_text)
-            except InvalidOperation as error:
+            missing_columns = [
+                column
+                for column in (product_column, sales_column)
+                if column not in reader.fieldnames
+            ]
+            if missing_columns:
                 raise ValueError(
-                    f"{line_number}行目の売上金額が数値ではありません: {sales_text}"
-                ) from error
+                    f"CSVに必要な列がありません: {', '.join(missing_columns)}"
+                )
 
-            rows.append((product, sales))
+            for line_number, row in enumerate(reader, start=2):
+                product = row[product_column].strip()
+                sales_text = row[sales_column].strip()
+
+                if not product:
+                    raise ValueError(f"{line_number}行目の商品名が空です。")
+
+                try:
+                    sales = Decimal(sales_text)
+                except InvalidOperation as error:
+                    raise ValueError(
+                        f"{line_number}行目の売上金額が数値ではありません: {sales_text}"
+                    ) from error
+
+                rows.append((product, sales))
+    except UnicodeDecodeError as error:
+        raise ValueError(
+            f"CSVファイルの文字コードが {encoding} として読み取れません: {path}"
+        ) from error
 
     return rows
 
